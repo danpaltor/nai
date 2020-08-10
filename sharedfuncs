@@ -1,11 +1,8 @@
 #!/bin/bash
-# FIX THIS ISSUES | NON-ACUTE
-#shellcheck disable=SC1091,SC2001,SC2015,SC2034,SC2126,SC2154
-#shellcheck disable=SC2154,SC2155,SC2181,SC2207,SC2143,SC2162
 
 : 'ATTENTION!:
 --------------------------------------------------
-|  Created by helmuthdu <helmuthdu@gmail.com>    |
+|  Created by danpaltor <danielpalumbi@gmail.com>    |
 |  Shellchecked by uniminin <uniminin@zoho.com>  |
 --------------------------------------------------
 This program is free software: you can redistribute it and/or modify

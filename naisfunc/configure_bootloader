@@ -1,0 +1,157 @@
+#!/bin/bash
+
+#CONFIGURE BOOTLOADER {{{
+configure_bootloader() {
+  case $bootloader in
+  Grub2)
+    print_title "GRUB2 - https://wiki.archlinux.org/index.php/GRUB2"
+    print_info "GRUB2 is the next generation of the GRand Unified Bootloader (GRUB).\nIn brief, the bootloader is the first software program that runs when a computer starts. It is responsible for loading and transferring control to the Linux kernel."
+    grub_install_mode=("Automatic" "Manual")
+    PS3="$prompt1"
+    echo -e "Grub Install:\n"
+    select OPT in "${grub_install_mode[@]}"; do
+      case "$REPLY" in
+      1)
+        if [[ $LUKS -eq 1 ]]; then
+          sed -i -e 's/GRUB_CMDLINE_LINUX="\(.\+\)"/GRUB_CMDLINE_LINUX="\1 cryptdevice=\/dev\/'"${LUKS_DISK}"':crypt"/g' -e 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cryptdevice=\/dev\/'"${LUKS_DISK}"':crypt"/g' "${MOUNTPOINT}"/etc/default/grub
+        fi
+        if [[ $UEFI -eq 1 ]]; then
+          arch_chroot "grub-install --target=x86_64-efi --efi-directory=${EFI_MOUNTPOINT} --bootloader-id=arch_grub --recheck"
+        else
+          arch_chroot "grub-install --target=i386-pc --recheck --debug ${BOOT_MOUNTPOINT}"
+        fi
+        break
+        ;;
+      2)
+        arch-chroot "${MOUNTPOINT}"
+        break
+        ;;
+      *)
+        invalid_option
+        ;;
+      esac
+    done
+    arch_chroot "grub-mkconfig -o /boot/grub/grub.cfg"
+    ;;
+  Syslinux)
+    print_title "SYSLINUX - https://wiki.archlinux.org/index.php/Syslinux"
+    print_info "Syslinux is a collection of boot loaders capable of booting from hard drives, CDs, and over the network via PXE. It supports the fat, ext2, ext3, ext4, and btrfs file systems."
+    syslinux_install_mode=("[MBR] Automatic" "[PARTITION] Automatic" "Manual")
+    PS3="$prompt1"
+    echo -e "Syslinux Install:\n"
+    select OPT in "${syslinux_install_mode[@]}"; do
+      case "$REPLY" in
+      1)
+        arch_chroot "syslinux-install_update -iam"
+        if [[ $LUKS -eq 1 ]]; then
+          sed -i "s/APPEND root=.*/APPEND root=\/dev\/mapper\/${ROOT_PART} cryptdevice=\/dev\/${LUKS_DISK}:crypt ro/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        elif [[ $LVM -eq 1 ]]; then
+          sed -i "s/sda[0-9]/\/dev\/mapper\/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        else
+          sed -i "s/sda[0-9]/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        fi
+        print_warning "The partition in question needs to be whatever you have as / (root), not /boot."
+        pause_function
+        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        break
+        ;;
+      2)
+        arch_chroot "syslinux-install_update -i"
+        if [[ $LUKS -eq 1 ]]; then
+          sed -i "s/APPEND root=.*/APPEND root=\/dev\/mapper\/${ROOT_PART} cryptdevice=\/dev\/${LUKS_DISK}:crypt ro/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        elif [[ $LVM -eq 1 ]]; then
+          sed -i "s/sda[0-9]/\/dev\/mapper\/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        else
+          sed -i "s/sda[0-9]/${ROOT_PART}/g" "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        fi
+        print_warning "The partition in question needs to be whatever you have as / (root), not /boot."
+        pause_function
+        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/syslinux/syslinux.cfg
+        break
+        ;;
+      3)
+        print_info "Your boot partition, on which you plan to install Syslinux, must contain a FAT, ext2, ext3, ext4, or Btrfs file system. You should install it on a mounted directory, not a /dev/sdXY partition. You do not have to install it on the root directory of a file system, e.g., with partition /dev/sda1 mounted on /boot you can install Syslinux in the syslinux directory"
+        echo -e "$prompt3"
+        print_warning "mkdir /boot/syslinux\nextlinux --install /boot/syslinux "
+        arch-chroot "${MOUNTPOINT}"
+        break
+        ;;
+      *)
+        invalid_option
+        ;;
+      esac
+    done
+    ;;
+  Systemd)
+    print_title "SYSTEMD-BOOT - https://wiki.archlinux.org/index.php/Systemd-boot"
+    print_info "systemd-boot (previously called gummiboot), is a simple UEFI boot manager which executes configured EFI images. The default entry is selected by a configured pattern (glob) or an on-screen menu. It is included with systemd since systemd 220-2."
+    print_warning "\tSystemd-boot heavily suggests that /boot is mounted to the EFI partition, not /boot/efi, in order to simplify updating and configuration."
+    gummiboot_install_mode=("Automatic" "Manual")
+    PS3="$prompt1"
+    echo -e "Gummiboot install:\n"
+    select OPT in "${gummiboot_install_mode[@]}"; do
+      case "$REPLY" in
+      1)
+        arch_chroot "bootctl --path=${EFI_MOUNTPOINT} install"
+        print_warning "Please check your .conf file"
+        partuuid=$(blkid -s PARTUUID "${ROOT_MOUNTPOINT}" | awk '{print $2}' | sed 's/"//g' | sed 's/^.*=//')
+        if [ "$(arch-chroot "${MOUNTPOINT}" ls /boot | grep hardened -c)" -gt "0" ]; then
+          img_name="linux-hardened"
+        elif [ "$(arch-chroot "${MOUNTPOINT}" ls /boot | grep lts -c)" -gt "0" ]; then
+          img_name="linux-lts"
+        elif [ "$(arch-chroot "${MOUNTPOINT}" ls /boot | grep zen -c)" -gt "0" ]; then
+          img_name="linux-zen"
+        else
+          img_name="linux"
+        fi
+        if [[ $LUKS -eq 1 ]]; then
+          echo -e "title\tArch Linux\nlinux\t/vmlinuz-${img_name}\ninitrd\t/initramfs-${img_name}.img\noptions\tcryptdevice=\/dev\/${LUKS_DISK}:luks root=\/dev\/mapper\/${ROOT_PART} rw" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
+        elif [[ $LVM -eq 1 ]]; then
+          echo -e "title\tArch Linux\nlinux\t/vmlinuz-${img_name}\ninitrd\t/initramfs-${img_name}.img\noptions\troot=\/dev\/mapper\/${ROOT_PART} rw" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
+        else
+          echo -e "title\tArch Linux\nlinux\t/vmlinuz-${img_name}\ninitrd\t/initramfs-${img_name}.img\noptions\troot=PARTUUID=${partuuid} rw" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
+        fi
+        echo -e "default  arch\ntimeout  5" >"${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/loader.conf
+        pause_function
+        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/entries/arch.conf
+        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/loader/loader.conf
+        break
+        ;;
+      2)
+        arch-chroot "${MOUNTPOINT}"
+        break
+        ;;
+      *)
+        invalid_option
+        ;;
+      esac
+    done
+    ;;
+  rEFInd)
+    print_title "REFIND - https://wiki.archlinux.org/index.php/REFInd"
+    print_info "rEFInd is a UEFI boot manager capable of launching EFISTUB kernels. It is a fork of the no-longer-maintained rEFIt and fixes many issues with respect to non-Mac UEFI booting. It is designed to be platform-neutral and to simplify booting multiple OSes."
+    print_warning "When refind-install (used in Automatic mode) is run in chroot (e.g. in live system when installing Arch Linux) /boot/refind-linux.conf is populated with kernel options from the live system not the one on which it is installed. You need to adjust kernel options in /boot/refind-linux.conf manually."
+    refind_install_mode=("Automatic" "Manual")
+    PS3="$prompt1"
+    echo -e "rEFInd install:\n"
+    select OPT in "${refind_install_mode[@]}"; do
+      case "$REPLY" in
+      1)
+        arch_chroot "refind-install"
+        $EDITOR "${MOUNTPOINT}""${EFI_MOUNTPOINT}"/refind_linux.conf
+        break
+        ;;
+      2)
+        arch-chroot "${MOUNTPOINT}"
+        break
+        ;;
+      *)
+        invalid_option
+        ;;
+      esac
+    done
+    ;;
+  esac
+  pause_function
+}
+#}}} 
