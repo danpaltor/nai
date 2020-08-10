@@ -1,6 +1,3 @@
-### Project only accepting patches
-This project is not actively developed but *will* accept Pull Requests.
-
 <h1 align="center">
   New <a href=https://www.archlinux.org/>Archlinux</a> Installer
 </h1>
