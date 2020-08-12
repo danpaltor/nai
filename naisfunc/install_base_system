@@ -1,5 +1,32 @@
 #!/bin/bash
 
+#INSTALL BASE SYSTEM {{{
+select_linux_version() {
+  print_title "LINUX VERSION"
+  version_list=("linux (default)" "linux-lts (long term support)" "linux-hardened (security features)" "linux-zen (tuned kernel)")
+  PS3="$prompt1"
+  echo -e "Select linux version to install\n"
+  select VERSION in "${version_list[@]}"; do
+    if contains_element "$VERSION" "${version_list[@]}"; then
+      if [ "linux (default)" == "$VERSION" ]; then
+        pacstrap "${MOUNTPOINT}" base linux linux-headers
+      elif [ "linux-lts (long term support)" == "$VERSION" ]; then
+        pacstrap "${MOUNTPOINT}" base linux-lts linux-lts-headers
+      elif [ "linux-hardened (security features)" == "$VERSION" ]; then
+        pacstrap "${MOUNTPOINT}" base linux-hardened linux-hardened-headers
+      elif [ "linux-zen (tuned kernel)" == "$VERSION" ]; then
+        pacstrap "${MOUNTPOINT}" base linux-zen linux-zen-headers
+      fi
+      pacstrap "${MOUNTPOINT}" \
+        linux-firmware cryptsetup lvm2 netctl dhcpcd inetutils jfsutils diffutils e2fsprogs \
+        less linux-firmware logrotate man-db man-pages mdadm nano \
+        perl reiserfsprogs s-nail sysfsutils texinfo usbutils vi which xfsprogs
+      break
+    else
+      invalid_option
+    fi
+  done
+}
 
 install_base_system() {
   print_title "INSTALL BASE SYSTEM"
@@ -10,8 +37,10 @@ install_base_system() {
   select_linux_version
   pacstrap "${MOUNTPOINT}" base-devel parted btrfs-progs f2fs-tools net-tools
   [[ $? -ne 0 ]] && error_msg "Installing base system to ${MOUNTPOINT} failed. Check error messages above."
+
   local PTABLE=$(parted -sl | grep "gpt")
   [[ -n $PTABLE ]] && pacstrap "${MOUNTPOINT}" gptfdisk
+
   WIRELESS_DEV=$(ip link | grep wl | awk '{print $2}' | sed 's/://' | sed '1!d')
   if [[ -n $WIRELESS_DEV ]]; then
     pacstrap "${MOUNTPOINT}" iw wireless_tools wpa_supplicant dialog
@@ -21,6 +50,7 @@ install_base_system() {
       arch_chroot "systemctl enable dhcpcd@${WIRED_DEV}.service"
     fi
   fi
+  
   if is_package_installed "espeakup"; then
     pacstrap "${MOUNTPOINT}" alsa-utils espeakup brltty
     arch_chroot "systemctl enable espeakup.service"

@@ -478,9 +478,9 @@ automatic_mode(){
   print_danger "\tUse this mode only if you already know all the option.\n\tYou won't be able to select anything later."
   read_input_text "Enable Automatic Mode"
   if [[ $OPTION == y ]]; then
-    $EDITOR "${AUI_DIR}"/lilo.automode
+    $EDITOR "${NAI_DIR}"/lilo.automode
     # shellcheck source=/root/aui/lilo.automode
-    source "${AUI_DIR}"/lilo.automode
+    source "${NAI_DIR}"/lilo.automode
     echo -e "The installation will start now."
     pause_function
     AUTOMATIC_MODE=1
@@ -3362,7 +3362,7 @@ finish(){
   print_title "WARNING: PACKAGES INSTALLED FROM AUR"
   print_danger "List of packages not officially supported that may kill your cat:"
   pause_function
-  AUR_PKG_LIST="${AUI_DIR}/aur_pkg_list.log"
+  AUR_PKG_LIST="${NAI_DIR}/aur_pkg_list.log"
   pacman -Qm | awk '{print $1}' > "$AUR_PKG_LIST"
   less "$AUR_PKG_LIST"
   print_title "INSTALL COMPLETED"

@@ -124,15 +124,6 @@ else
 fi
 #end format_partitions
 
-#select_linux_version
-if [[ -f $(pwd)/naisfunc/select_linux_version ]]; then
-  source naisfunc/select_linux_version
-else
-  echo "missing file: select_linux_version"
-  exit 1
-fi
-#end select_linux_version
-
 #install_base_system
 if [[ -f $(pwd)/naisfunc/install_base_system ]]; then
   source naisfunc/install_base_system

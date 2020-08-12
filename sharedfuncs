@@ -46,14 +46,14 @@ Run this script after your first boot with archlinux (as root)
     BPurple=${Bold}${Purple}
     BCyan=${Bold}${Cyan}
     BWhite=${Bold}${White}
-  #}}}
+  
 
 
     # PROMPT {{{
     prompt1="Enter your option: "
     prompt2="Enter n° of options (ex: 1 2 3 or 1-3): "
     prompt3="You have to manually enter the following commands, then press ${BYellow}ctrl+d${Reset} or type ${BYellow}exit${Reset}:"
-  #}}}
+  
 
   # EDITOR {{{
     AUTOMATIC_MODE=0
@@ -62,20 +62,20 @@ Run this script after your first boot with archlinux (as root)
     elif [[ -z $EDITOR ]]; then
       EDITOR="nano"
     fi
-  #}}}
+  
 
   # DESKTOP ENVIRONMENT{{{
     CINNAMON=0
     GNOME=0
     KDE=0
-  #}}}
+  
 
   # MOUNTPOINTS {{{
     EFI_MOUNTPOINT="/boot"
     ROOT_MOUNTPOINT="/dev/sda1"
     BOOT_MOUNTPOINT="/dev/sda"
     MOUNTPOINT="/mnt"
-  #}}}
+  
 
   ARCHI=$(uname -m) # ARCHITECTURE
   UEFI=0
@@ -84,43 +84,43 @@ Run this script after your first boot with archlinux (as root)
   LUKS_DISK="sda2"
   AUR=$(echo -e "(${BPurple}aur${Reset})")
   EXTERNAL=$(echo -e "(${BYellow}external${Reset})")
-  AUI_DIR=$(pwd) #CURRENT DIRECTORY
+  NAI_DIR=$(pwd) #CURRENT DIRECTORY
   [[ $1 == -v || $1 == --verbose ]] && VERBOSE_MODE=1 || VERBOSE_MODE=0 # VERBOSE MODE
-  LOG="${AUI_DIR}/$(basename "${0}").log" # LOG FILE
+  LOG="${NAI_DIR}/$(basename "${0}").log" # LOG FILE
   [[ -f $LOG ]] && rm -f "$LOG"
   PKG=""
-  PKG_FAIL="${AUI_DIR}/$(basename "${0}")_fail_install.log"
+  PKG_FAIL="${NAI_DIR}/$(basename "${0}")_fail_install.log"
   [[ -f $PKG_FAIL ]] && rm -f "$PKG_FAIL"
   XPINGS=0 # CONNECTION CHECK
   SPIN="/-\|" #SPINNER POSITION
   AUTOMATIC_MODE=0
   TRIM=0
-#}}}
+
 
 #COMMON FUNCTIONS {{{
-  error_msg() { #{{{
+  error_msg() { 
     local _msg="${1}"
     echo -e "${_msg}"
     exit 1
-  } #}}}
+  } 
 
-  cecho() { #{{{
+  cecho() { 
     echo -e "$1"
     echo -e "$1" >>"$LOG"
     tput sgr0;
-  } #}}}
+  } 
 
-  ncecho() { #{{{
+  ncecho() { 
     echo -ne "$1"
     echo -ne "$1" >>"$LOG"
     tput sgr0
-  } #}}}
+  } 
 
-  spinny() { #{{{
+  spinny() { 
     echo -ne "\b${SPIN:i++%${#SPIN}:1}"
-  } #}}}
+  } 
 
-  progress() { #{{{
+  progress() { 
     ncecho "  ";
     while true; do
       kill -0 "$pid" &> /dev/null;
@@ -142,9 +142,9 @@ Run this script after your first boot with archlinux (as root)
         break
       fi
     done
-  } #}}}
+  } 
 
-  check_boot_system() { #{{{
+  check_boot_system() { 
     if [[ "$(cat /sys/class/dmi/id/sys_vendor)" == 'Apple Inc.' ]] || [[ "$(cat /sys/class/dmi/id/sys_vendor)" == 'Apple Computer, Inc.' ]]; then
       modprobe -r -q efivars || true  # if MAC
     else
@@ -162,44 +162,44 @@ Run this script after your first boot with archlinux (as root)
       echo "BIOS Mode detected"
     fi
   }
-  #}}}
+  
 
-  check_trim() { #{{{
+  check_trim() { 
     [[ -n $(hdparm -I /dev/sda | grep TRIM 2> /dev/null) ]] && TRIM=1
   }
-  #}}}
+  
 
-  check_root() { #{{{
+  check_root() { 
     if [[ "$(id -u)" != "0" ]]; then
       error_msg "ERROR! You must execute the script as the 'root' user."
     fi
-  } #}}}
+  } 
 
-  check_user() { #{{{
+  check_user() { 
     if [[ "$(id -u)" == "0" ]]; then
       error_msg "ERROR! You must execute the script as a normal user."
     fi
-  } #}}}
+  } 
 
-  check_archlinux() { #{{{
+  check_archlinux() { 
     if [[ ! -e /etc/arch-release ]]; then
       error_msg "ERROR! You must execute the script on Arch Linux."
     fi
-  } #}}}
+  } 
 
-  check_hostname() { #{{{
+  check_hostname() { 
     if [[ $(echo "${HOSTNAME}" | sed 's/ //g') == "" ]]; then
       error_msg "ERROR! Hostname is not configured."
     fi
-  } #}}}
+  } 
 
-  check_pacman_blocked() { #{{{
+  check_pacman_blocked() { 
     if [[ -f /var/lib/pacman/db.lck ]]; then
       error_msg "ERROR! Pacman is blocked. \nIf not running remove /var/lib/pacman/db.lck."
     fi
-  } #}}}
+  } 
 
-  check_domainname() { #{{{
+  check_domainname() { 
     local _domainname=$(echo "${HOSTNAME}" | cut -d'.' -f2- | sed 's/ //g')
 
     # no domain name. Keep looking...
@@ -211,9 +211,9 @@ Run this script after your first boot with archlinux (as root)
     if [[ "${_domainname}" == "" ]]; then
       error_msg "ERROR! Domain name is not configured."
     fi
-  } #}}}
+  } 
 
-  check_connection(){ #{{{
+  check_connection(){ 
     XPINGS=$(( XPINGS + 1 ))
     connection_test() {
       ping -q -w 1 -c 1 "$(ip r | grep default | awk 'NR==1 {print $3}')" &> /dev/null && return 1 || return 0
@@ -272,9 +272,9 @@ Run this script after your first boot with archlinux (as root)
       fi
       [[ $REPLY -ne 5 ]] && check_connection
     fi
-  } #}}}
+  } 
 
-  check_vga() { #{{{
+  check_vga() { 
     # Determine video chipset - only Intel, ATI and nvidia are supported by this script
     ncecho " ${BBlue}[${Reset}${Bold}X${BBlue}]${Reset} Detecting video chipset "
     local _vga=$(lspci | grep VGA | tr "[:upper:]" "[:lower:]")
@@ -318,18 +318,18 @@ Run this script after your first boot with archlinux (as root)
       printf "%s" "Type your video driver [ex: sis, fbdev, modesetting]: "
       read -r VIDEO_DRIVER
     fi
-  } #}}}
+  } 
 
-  read_input() { #{{{
+  read_input() { 
     if [[ $AUTOMATIC_MODE -eq 1 ]]; then
       OPTION=$1
     else
       printf "%s" "$prompt1"
       read -r OPTION
     fi
-  } #}}}
+  } 
 
-  read_input_text() { #{{{
+  read_input_text() { 
     if [[ $AUTOMATIC_MODE -eq 1 ]]; then
       OPTION=$2
     else
@@ -338,9 +338,9 @@ Run this script after your first boot with archlinux (as root)
       echo ""
     fi
     OPTION=$(echo "$OPTION" | tr '[:upper:]' '[:lower:]')
-  } #}}}
+  } 
 
-  read_input_options() { #{{{
+  read_input_options() { 
     local line
     local packages
     if [[ $AUTOMATIC_MODE -eq 1 ]]; then
@@ -360,41 +360,41 @@ Run this script after your first boot with archlinux (as root)
       fi
     done
     OPTIONS=("${packages[@]}")
-  } #}}}
+  } 
 
-  print_line() { #{{{
+  print_line() { 
     printf "%$(tput cols)s\n"|tr ' ' '-'
-  } #}}}
+  } 
 
-  print_title() { #{{{
+  print_title() { 
     clear
     print_line
     echo -e "# ${Bold}$1${Reset}"
     print_line
     echo ""
-  } #}}}
+  } 
 
-  print_info() { #{{{
+  print_info() { 
     #Console width number
     T_COLS=$(tput cols)
     echo -e "${Bold}$1${Reset}\n" | fold -sw $(( T_COLS - 18 )) | sed 's/^/\t/'
-  } #}}}
+  } 
 
-  print_warning() { #{{{
+  print_warning() { 
     T_COLS=$(tput cols)
     echo -e "${BYellow}$1${Reset}\n" | fold -sw $(( T_COLS - 1 ))
-  } #}}}
+  } 
 
-  print_danger() { #{{{
+  print_danger() { 
     T_COLS=$(tput cols)
     echo -e "${BRed}$1${Reset}\n" | fold -sw $(( T_COLS - 1 ))
-  } #}}}
+  } 
 
-  start_module() { #{{{
+  start_module() { 
     modprobe "$1"
-  } #}}}
+  } 
 
-  add_module() { #{{{
+  add_module() { 
     for module in $1; do
       #check if the name of the module can be the same of the module or the given name
       [[ $# -lt 2 ]] && local _module_name="$module" || local _module_name="$2"
@@ -402,9 +402,9 @@ Run this script after your first boot with archlinux (as root)
       [[ -z $_has_module ]] && echo "$module" >> /etc/modules-load.d/"${_module_name}".conf
       start_module "$module"
     done
-  } #}}}
+  } 
 
-  add_repository() { #{{{
+  add_repository() { 
     local _repo=${1}
     local _url=${2}
     [[ -n ${3} ]] && local _siglevel="\nSigLevel = ${3}" || local _siglevel=""
@@ -414,9 +414,9 @@ Run this script after your first boot with archlinux (as root)
       echo -e "\n[${_repo}]${_siglevel}\nServer = ${_url}" >> /etc/pacman.conf
       system_update
     fi
-  } #}}}
+  } 
 
-  check_multilib(){ #{{{
+  check_multilib(){ 
     # this option will avoid any problem with packages install
     if [[ $ARCHI == x86_64 ]]; then
       local _has_multilib=$(grep -n "\[multilib\]" /etc/pacman.conf | cut -f1 -d:)
@@ -429,18 +429,18 @@ Run this script after your first boot with archlinux (as root)
         sed -i "${_has_multilib}s/^#//" /etc/pacman.conf
       fi
     fi
-  } #}}}
+  } 
 
-  add_key() { #{{{
+  add_key() { 
     pacman-key -r "$1"
     pacman-key --lsign-key "$1"
-  } #}}}
+  } 
 
-  add_key_user() { #{{{
+  add_key_user() { 
     su - "${username}" -c "gpg --recv-keys --keyserver $1"
-  } #}}}
+  } 
 
-  pacman_key(){ #{{{
+  pacman_key(){ 
     if [[ ! -d /etc/pacman.d/gnupg ]]; then
       print_title "PACMAN KEY - https://wiki.archlinux.org/index.php/pacman-key"
       print_info "Pacman uses GnuPG keys in a web of trust model to determine if packages are authentic."
@@ -451,17 +451,17 @@ Run this script after your first boot with archlinux (as root)
       pkill haveged
       package_remove "haveged"
     fi
-  } #}}}
+  } 
 
-  add_line() { #{{{
+  add_line() { 
     local _add_line=${1}
     local _filepath=${2}
 
     local _has_line=$(grep -ci "${_add_line}" "${_filepath}" 2>&1)
     [[ $_has_line -eq 0 ]] && echo "${_add_line}" >> "${_filepath}"
-  } #}}}
+  } 
 
-  replace_line() { #{{{
+  replace_line() { 
     local _search=${1}
     local _replace=${2}
     local _filepath=${3}
@@ -473,9 +473,9 @@ Run this script after your first boot with archlinux (as root)
     else
       cecho "failed: ${_search} - ${_filepath}"
     fi
-  } #}}}
+  } 
 
-  update_early_modules() { #{{{
+  update_early_modules() { 
     local _new_module=${1}
     local _current_modules=$(grep -E ^MODULES= /etc/mkinitcpio.conf)
 
@@ -495,27 +495,27 @@ Run this script after your first boot with archlinux (as root)
         pid=$!;progress $pid
       fi
     fi
-  } #}}}
+  } 
 
-  is_package_installed() { #{{{
+  is_package_installed() { 
     #check if a package is already installed
     for PKG in $1; do
       pacman -Q "$PKG" &> /dev/null && return 0;
     done
     return 1
-  } #}}}
+  } 
 
-  checkbox() { #{{{
+  checkbox() { 
     #display [X] or [ ]
     [[ "$1" -eq 1 ]] && echo -e "${BBlue}[${Reset}${Bold}X${BBlue}]${Reset}" || echo -e "${BBlue}[ ${BBlue}]${Reset}";
-  } #}}}
+  } 
 
-  checkbox_package() { #{{{
+  checkbox_package() { 
     #check if [X] or [ ]
     is_package_installed "$1" && checkbox 1 || checkbox 0
-  } #}}}
+  } 
 
-  aui_download_packages() { #{{{
+  aui_download_packages() { 
     for PKG in $1; do
       #exec command as user instead of root
       su - "${username}" -c "
@@ -528,9 +528,9 @@ Run this script after your first boot with archlinux (as root)
         makepkg -csi --noconfirm
       "
     done
-  } #}}}
+  } 
 
-  aur_package_install() { #{{{
+  aur_package_install() { 
     su - "${username}" -c "sudo -v"
     #install package from aur
     for PKG in $1; do
@@ -550,9 +550,9 @@ Run this script after your first boot with archlinux (as root)
         fi
       fi
     done
-  } #}}}
+  } 
 
-  package_install() { #{{{
+  package_install() { 
     #install packages using pacman
     if [[ $AUTOMATIC_MODE -eq 1 || $VERBOSE_MODE -eq 0 ]]; then
       for PKG in ${1}; do
@@ -582,9 +582,9 @@ Run this script after your first boot with archlinux (as root)
     else
       pacman -S --needed "${1}"
     fi
-  } #}}}
+  } 
 
-  package_remove() { #{{{
+  package_remove() { 
     #remove package
     for PKG in ${1}; do
       if is_package_installed "${PKG}" ; then
@@ -597,50 +597,50 @@ Run this script after your first boot with archlinux (as root)
         fi
       fi
     done
-  } #}}}
+  } 
 
-  system_update() { #{{{
+  system_update() { 
     pacman -Sy
-  } #}}}
+  } 
 
-  npm_install() { #{{{
+  npm_install() { 
     #install packages using pacman
     npm install -g "$1"
-  } #}}}
+  } 
 
-  gem_install() { #{{{
+  gem_install() { 
     #install packages using pacman
     for PKG in ${1}; do
       sudo -u "${username}" gem install -V "$PKG"
     done
-  } #}}}
+  } 
 
-  contains_element() { #{{{
+  contains_element() { 
     #check if an element exist in a string
     for e in "${@:2}"; do [[ "$e" == "$1" ]] && break; done;
-  } #}}}
+  } 
 
-  config_xinitrc() { #{{{
+  config_xinitrc() { 
     #create a xinitrc file in home user directory
     cp -fv /etc/X11/xinit/xinitrc /home/"${username}"/.xinitrc
     echo -e "exec $1" >> /home/"${username}"/.xinitrc
     chown -R "${username}":users /home/"${username}"/.xinitrc
-  } #}}}
+  } 
 
-  invalid_option() { #{{{
+  invalid_option() { 
     print_line
     echo "Invalid option. Try another one."
     pause_function
-  } #}}}
+  } 
 
-  pause_function() { #{{{
+  pause_function() { 
     print_line
     if [[ $AUTOMATIC_MODE -eq 0 ]]; then
       read -e -sn 1 -p "Press enter to continue..."
     fi
-  } #}}}
+  } 
 
-  menu_item() { #{{{
+  menu_item() { 
     #check if the number of arguments is less then 2
     [[ $# -lt 2 ]] && _package_name="$1" || _package_name="$2";
     #list of chars to remove from the package name
@@ -649,36 +649,36 @@ Run this script after your first boot with archlinux (as root)
     for char in "${_chars[@]}"; do _package_name=$(echo "${_package_name^}" | sed 's/'"$char"'//'); done
     #display checkbox and package name
     echo -e "$(checkbox_package "$1") ${Bold}${_package_name}${Reset}"
-  } #}}}
+  } 
 
-  mainmenu_item() { #{{{
+  mainmenu_item() { 
     #if the task is done make sure we get the state
     if [ "$1" == 1 ] && [ "$3" != "" ]; then
       state="${BGreen}[${Reset}$3${BGreen}]${Reset}"
     fi
     echo -e "$(checkbox "$1") ${Bold}$2${Reset} ${state}"
-  } #}}}
+  } 
 
-  system_ctl() { #{{{
+  system_ctl() { 
     local _action=${1}
     local _object=${2}
     ncecho " ${BBlue}[${Reset}${Bold}X${BBlue}]${Reset} systemctl ${_action} ${_object} "
     systemctl "${_action}" "${_object}" >> "$LOG" 2>&1
     pid=$!;progress $pid
   }
-  #}}}
+  
 
-  arch_chroot() { #{{{
+  arch_chroot() { 
     arch-chroot $MOUNTPOINT /bin/bash -c "${1}"
   }
-  #}}}
+  
 
-  run_as_user() { #{{{
+  run_as_user() { 
     sudo -H -u "${username}" "${1}"
   }
-  #}}}
+  
 
-  add_user_to_group() { #{{{
+  add_user_to_group() { 
     local _user=${1}
     local _group=${2}
 
@@ -690,9 +690,9 @@ Run this script after your first boot with archlinux (as root)
     groupadd "${_group}" >>"$LOG" 2>&1 &
     gpasswd -a "${_user}" "${_group}" >>"$LOG" 2>&1 &
     pid=$!;progress $pid
-  } #}}}
+  } 
 
-  setlocale() { #{{{
+  setlocale() { 
     local _locale_list=($(grep UTF-8 /etc/locale.gen | sed 's/\..*$//' | sed '/@/d' | awk '{print $1}' | uniq | sed 's/#//g'));
     PS3="$prompt1"
     echo "Select locale:"
@@ -705,9 +705,9 @@ Run this script after your first boot with archlinux (as root)
       fi
     done
   }
-  #}}}
+  
 
-  settimezone() { #{{{
+  settimezone() { 
     local _zones=($(timedatectl list-timezones | sed 's/\/.*$//' | uniq))
     PS3="$prompt1"
     echo "Select zone:"
@@ -728,7 +728,7 @@ Run this script after your first boot with archlinux (as root)
         invalid_option
       fi
     done
-  } #}}}
+  } 
 
-#}}}
+
 
